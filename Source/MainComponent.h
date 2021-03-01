@@ -29,22 +29,39 @@ public:
     
     
 private:
-    //==============================================================================
-    // Your private member variables go here...
+    //==============================================================================    
+    // VST Audio/Midi Routing Graph
     std::unique_ptr<AudioProcessorGraph>            m_pMainGraph;
     
-    
+    // I/O Plugins
     std::unique_ptr<AudioPluginInstance>            m_ioProcOut;
     std::unique_ptr<AudioPluginInstance>            m_ioProcMidiIn;
     std::unique_ptr<AudioPluginInstance>            m_ioProcMidiOut;
     
+    // I/O Plugin Nodes
     AudioProcessorGraph::Node::Ptr                  m_ioProcOutNode;
     AudioProcessorGraph::Node::Ptr                  m_ioProcMidiInNode;
     AudioProcessorGraph::Node::Ptr                  m_ioProcMidiOutNode;
 
-    std::unique_ptr<AudioPluginInstance>            m_pluginInstance;
-    AudioProcessorGraph::Node::Ptr                  m_pluginInstanceNode;
-    AudioProcessorEditor*                           editor;
+    // Dinverno System Plugin, Node and Editor
+    std::unique_ptr<AudioPluginInstance>            m_dinvernoSystemPluginInstance;
+    AudioProcessorGraph::Node::Ptr                  m_dinvernoSystemPluginInstanceNode;
+    AudioProcessorEditor*                           m_dinvernoSystemPluginEditor;
+    
+    // Dinverno Audio/Midi Recorder Plugin, Node and Editor
+    std::unique_ptr<AudioPluginInstance>            m_dinvernoRecorderPluginInstance;
+    AudioProcessorGraph::Node::Ptr                  m_dinvernoRecorderPluginInstanceNode;
+    AudioProcessorEditor*                           m_dinvernoRecorderPluginEditor;
+    
+    // Helm Synth for Machine Audio Plugin and Node
+    std::unique_ptr<AudioPluginInstance>            m_helmMachinePresetPluginInstance;
+    AudioProcessorGraph::Node::Ptr                  m_helmMachinePresetPluginInstanceNode;
+    //AudioProcessorEditor*                           m_helmMachinePresetPluginEditor;
+    
+    // Helm Synth for Human Audio Plugin and Node
+    std::unique_ptr<AudioPluginInstance>            m_helmHumanPresetPluginInstance;
+    AudioProcessorGraph::Node::Ptr                  m_helmHumanPresetPluginInstanceNode;
+    //AudioProcessorEditor*                           m_helmHumanPresetPluginEditor;
     
     AudioDeviceManager deviceManager;
     AudioProcessorPlayer player;

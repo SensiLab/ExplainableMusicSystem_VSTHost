@@ -3,9 +3,6 @@
 //==============================================================================
 MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
 {
-    // Window Size
-    setSize (200, 200);
-    
     // Initialise Graph and Player
     m_pMainGraph->enableAllBuses();
     deviceManager.initialiseWithDefaultDevices(2, 2);
@@ -57,8 +54,8 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     File resourcesPath = contentsPath.getChildFile("Resources");
     plist.scanAndAddFile(resourcesPath.getFullPathName()+"/dinverno_plugin.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
     plist.scanAndAddFile(resourcesPath.getFullPathName()+"/DinvernoAudioMidiRecorder.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
-    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm-preset2.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
-    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm-preset4.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
     
     
     //plist.scanAndAddFile("/Users/Sam/Documents/Research/TeresaProjects/Plugins/DinvernoSystemPlugins/dinverno_plugin.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
@@ -75,16 +72,14 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     m_helmHumanPresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[2], 44100.0, 512, msg);
     m_helmMachinePresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[3], 44100.0, 512, msg);
 
-    // Open Plugin Editors
-    m_dinvernoSystemPluginEditor = m_dinvernoSystemPluginInstance->createEditor();
-    auto dinvernoSystemContainer = m_dinvernoSystemPluginEditor->getConstrainer();
-    m_dinvernoSystemPluginEditor->setBounds(0, 0, dinvernoSystemContainer->getMinimumWidth(), dinvernoSystemContainer->getMinimumHeight());
-    addAndMakeVisible (m_dinvernoSystemPluginEditor);
+    m_helmHumanPresetPluginInstance->setCurrentProgram(103);
+    int numPrograms = m_helmHumanPresetPluginInstance->getNumPrograms();
+    int curProgram_human = m_helmHumanPresetPluginInstance->getCurrentProgram();
+    String programName_human = m_helmHumanPresetPluginInstance->getProgramName(curProgram_human);
     
-    m_dinvernoRecorderPluginEditor = m_dinvernoRecorderPluginInstance->createEditor();
-    auto dinvernoRecorderContainer = m_dinvernoRecorderPluginEditor->getConstrainer();
-    m_dinvernoRecorderPluginEditor->setBounds(0, dinvernoSystemContainer->getMinimumHeight(), dinvernoRecorderContainer->getMinimumWidth(), dinvernoRecorderContainer->getMinimumHeight());
-    addAndMakeVisible (m_dinvernoRecorderPluginEditor);
+    m_helmMachinePresetPluginInstance->setCurrentProgram(108);
+    int curProgram_machine = m_helmMachinePresetPluginInstance->getCurrentProgram();
+    String programName_machine = m_helmMachinePresetPluginInstance->getProgramName(curProgram_machine);
     
     // Create Plugin Nodes
     m_dinvernoSystemPluginInstanceNode = m_pMainGraph->addNode (std::move (m_dinvernoSystemPluginInstance) );
@@ -156,6 +151,45 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     
     player.setProcessor (m_pMainGraph.get());
     
+    // GUI Setup
+    // Window Size
+    int buf = 10;
+    int compWidth = 200;
+    int compHeight = 100;
+    setSize (2*compWidth+3*buf, 2*compHeight+3*buf);
+    //int buffer = getWidth()/80;
+    
+    // Open Plugin GUI Editor: Human
+    m_dinvernoSystemPluginEditor = m_dinvernoSystemPluginInstanceNode->getProcessor()->createEditor();
+    auto dinvernoSystemContainer = m_dinvernoSystemPluginEditor->getConstrainer();
+    m_dinvernoSystemPluginEditor->setBounds(buf, compHeight+2*buf, compWidth,compHeight);      //dinvernoSystemContainer->getMinimumWidth(), dinvernoSystemContainer->getMinimumHeight());
+    addAndMakeVisible (m_dinvernoSystemPluginEditor);
+    
+    // Open Plugin GUI Editor: Machine
+    m_dinvernoRecorderPluginEditor = m_dinvernoRecorderPluginInstanceNode->getProcessor()->createEditor();
+    auto dinvernoRecorderContainer = m_dinvernoRecorderPluginEditor->getConstrainer();
+    m_dinvernoRecorderPluginEditor->setBounds(compWidth+2*buf, compHeight+2*buf, compWidth,compHeight); // dinvernoRecorderContainer->getMinimumWidth(), dinvernoRecorderContainer->getMinimumHeight());
+    addAndMakeVisible (m_dinvernoRecorderPluginEditor);
+    
+    // VST Control Components: GUI Positioning
+    m_humanControlComponent.setBounds(buf,buf,compWidth,compHeight);
+    m_machineControlComponent.setBounds(compWidth+2*buf,buf,compWidth,compHeight);
+    
+    // VST Control Components: Human Setup
+    m_humanControlComponent.setTitle("Human Player");
+    m_humanControlComponent.setProgramName(programName_human);
+    m_humanControlComponent.setProgramNumber(curProgram_human);
+    m_humanControlComponent.addButtonListner(this);
+    
+    // VST Control Components: Machine setup
+    m_machineControlComponent.setTitle("Machine Player");
+    m_machineControlComponent.setProgramName(programName_machine);
+    m_machineControlComponent.setProgramNumber(curProgram_machine);
+    m_machineControlComponent.addButtonListner(this);
+    
+    addAndMakeVisible(m_humanControlComponent);
+    addAndMakeVisible(m_machineControlComponent);
+
     startTimer (100);
 }
 
@@ -217,6 +251,51 @@ void MainComponent::resized()
     // If you add any child components, this is where you should
     // update their positions.
     
+    
+    
+}
+
+// Button Listener
+void MainComponent::buttonClicked (Button* button)
+{
+
+    int curProgram_human = m_helmHumanPresetPluginInstanceNode->getProcessor()->getCurrentProgram();
+    //int curProgram_human = m_helmHumanPresetPluginInstance->getCurrentProgram();
+    String programName_human = m_helmHumanPresetPluginInstanceNode->getProcessor()->getProgramName(curProgram_human);
+    
+    int curProgram_machine = m_helmMachinePresetPluginInstanceNode->getProcessor()->getCurrentProgram();
+    //int curProgram_machine = m_helmMachinePresetPluginInstance->getCurrentProgram();
+    String programName_machine = m_helmMachinePresetPluginInstanceNode->getProcessor()->getProgramName(curProgram_machine);
+    
+    if (button == &m_humanControlComponent.prevButton){
+        // Human Prev Preset
+        int nextProgram_human = curProgram_human - 1;
+        m_helmHumanPresetPluginInstanceNode->getProcessor()->setCurrentProgram(nextProgram_human);
+    }else if (button == &m_humanControlComponent.nextButton){
+        // Human Next Preset
+        int nextProgram_human = curProgram_human + 1;
+        m_helmHumanPresetPluginInstanceNode->getProcessor()->setCurrentProgram(nextProgram_human);
+    }else if (button == &m_machineControlComponent.prevButton){
+        // Machine Next Preset
+        int nextProgram_machine = curProgram_machine - 1;
+        m_helmMachinePresetPluginInstanceNode->getProcessor()->setCurrentProgram(nextProgram_machine);
+    }else if (button == &m_machineControlComponent.nextButton){
+         // Machine Next Preset
+        int nextProgram_machine = curProgram_machine + 1;
+        m_helmMachinePresetPluginInstanceNode->getProcessor()->setCurrentProgram(nextProgram_machine);
+    }
+    
+    // Update GUI
+    curProgram_human = m_helmHumanPresetPluginInstanceNode->getProcessor()->getCurrentProgram();
+    programName_human = m_helmHumanPresetPluginInstanceNode->getProcessor()->getProgramName(curProgram_human);
+    m_humanControlComponent.setProgramName(programName_human);
+    m_humanControlComponent.setProgramNumber(curProgram_human);
+    
+    // Update GUI
+    curProgram_machine = m_helmMachinePresetPluginInstanceNode->getProcessor()->getCurrentProgram();
+    programName_machine = m_helmMachinePresetPluginInstanceNode->getProcessor()->getProgramName(curProgram_machine);
+    m_machineControlComponent.setProgramName(programName_machine);
+    m_machineControlComponent.setProgramNumber(curProgram_machine);
 }
 
 void MainComponent::updateGraph()

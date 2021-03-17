@@ -2,9 +2,13 @@
 
 <JUCERPROJECT id="rGKPVN" name="DinvernoVSTHost" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="1" displaySplashScreen="1" jucerFormatVersion="1"
-              companyName="SensiLab">
+              companyName="SensiLab" bundleIdentifier="com.sensilab.DinvernoVSTHost">
   <MAINGROUP id="oEKGvl" name="DinvernoVSTHost">
     <GROUP id="{11E7C70F-ACCB-EB08-2BC4-EE05955611F2}" name="Source">
+      <FILE id="LWYvhc" name="VstControlComponent.cpp" compile="1" resource="0"
+            file="Source/VstControlComponent.cpp"/>
+      <FILE id="XfIvoH" name="VstControlComponent.h" compile="0" resource="0"
+            file="Source/VstControlComponent.h"/>
       <FILE id="VbgCVb" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="gK8Olk" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="s3Fbx1" name="MainComponent.cpp" compile="1" resource="0"

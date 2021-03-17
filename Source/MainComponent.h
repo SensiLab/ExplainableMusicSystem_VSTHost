@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "VstControlComponent.h"
 
 //==============================================================================
 /*
@@ -8,7 +9,8 @@
     your controls and content.
 */
 class MainComponent  : public AudioAppComponent, //public juce::Component,
-                       private juce::Timer
+                       private juce::Timer,
+                       Button::Listener
 {
 public:
     //==============================================================================
@@ -27,6 +29,8 @@ public:
     void updateGraph();
     void timerCallback() override { updateGraph(); }
     
+    // Listener interface for buttons
+    void buttonClicked (Button* button) override;
     
 private:
     //==============================================================================    
@@ -65,6 +69,9 @@ private:
     
     AudioDeviceManager deviceManager;
     AudioProcessorPlayer player;
+    
+    VstControlComponent m_machineControlComponent;
+    VstControlComponent m_humanControlComponent;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

@@ -33,6 +33,8 @@ public:
     void buttonClicked (Button* button) override;
     void setExperimentMode(int mode);
     
+    AudioDeviceManager* getDeviceManager();
+    
 private:
     //==============================================================================    
     // VST Audio/Midi Routing Graph
@@ -73,6 +75,8 @@ private:
     
     VstControlComponent m_machineControlComponent;
     VstControlComponent m_humanControlComponent;
+    
+    
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

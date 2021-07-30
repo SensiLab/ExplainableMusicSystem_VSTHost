@@ -6,6 +6,8 @@
               version="2.0.0">
   <MAINGROUP id="oEKGvl" name="DinvernoVSTHost">
     <GROUP id="{11E7C70F-ACCB-EB08-2BC4-EE05955611F2}" name="Source">
+      <FILE id="sxpPUj" name="MainWindow.cpp" compile="1" resource="0" file="Source/MainWindow.cpp"/>
+      <FILE id="MU0PYj" name="MainWindow.h" compile="0" resource="0" file="Source/MainWindow.h"/>
       <FILE id="LWYvhc" name="VstControlComponent.cpp" compile="1" resource="0"
             file="Source/VstControlComponent.cpp"/>
       <FILE id="XfIvoH" name="VstControlComponent.h" compile="0" resource="0"

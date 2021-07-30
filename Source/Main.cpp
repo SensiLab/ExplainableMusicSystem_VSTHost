@@ -8,13 +8,7 @@
 
 #include <JuceHeader.h>
 #include "MainComponent.h"
-
-enum ExperimentModes{
-    Practice = 0,
-    FirstPerformance = 1,
-    SecondPerformance = 2,
-    ThirdPerformance = 3
-};
+#include "MainWindow.h"
 
 //==============================================================================
 class VSTSimpleHostApplication  : public juce::JUCEApplication
@@ -26,15 +20,23 @@ public:
     const juce::String getApplicationName() override       { return ProjectInfo::projectName; }
     const juce::String getApplicationVersion() override    { return ProjectInfo::versionString; }
     bool moreThanOneInstanceAllowed() override             { return true; }
-
+    std::unique_ptr<ApplicationProperties> appProperties;
+    
     //==============================================================================
     void initialise (const juce::String& commandLine) override
     {
         // This method is where you should put your application's initialisation code..
-
+        
+        PropertiesFile::Options options;
+        options.applicationName     = "DinvernoSystemLite VST Host";
+        options.filenameSuffix      = "settings";
+        options.osxLibrarySubFolder = "Preferences";
+              appProperties.reset (new ApplicationProperties());
+        appProperties->setStorageParameters (options);
+        
         mainWindow.reset (new MainWindow (getApplicationName()));
         
-        //mainWindow->setUsingNativeTitleBar (true); // Done in mainWindow
+        mainWindow->setUsingNativeTitleBar (true); // Done in mainWindow
         mainWindow->menuItemsChanged();
         
        // triggerAsyncUpdate();
@@ -66,7 +68,7 @@ public:
     /*
         This class implements the desktop window that contains an instance of
         our MainComponent class.
-    */
+    
     class MainWindow    : public juce::DocumentWindow,
                           public MenuBarModel
     {
@@ -207,7 +209,7 @@ public:
            It's best to do all your work in your content component instead, but if
            you really have to override any DocumentWindow methods, make sure your
            subclass also calls the superclass's method.
-        */
+        
         
 
     private:
@@ -216,10 +218,15 @@ public:
         
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
-
+     */
 private:
     std::unique_ptr<MainWindow> mainWindow;
 };
+
+//==============================================================================
+// Global Application Properties Helper Functions
+static VSTSimpleHostApplication& getApp()         { return *dynamic_cast<VSTSimpleHostApplication*>(JUCEApplication::getInstance()); }
+ApplicationProperties& getAppProperties()         { return *getApp().appProperties; }
 
 //==============================================================================
 // This macro generates the main() routine that launches the app.

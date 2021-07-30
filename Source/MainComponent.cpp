@@ -319,3 +319,7 @@ void MainComponent::setExperimentMode(int mode)
     m_dinvernoSystemPluginInstanceNode->getProcessor()->setCurrentProgram(mode);
     m_dinvernoRecorderPluginInstanceNode->getProcessor()->setCurrentProgram(mode);
 }
+
+AudioDeviceManager* MainComponent::getDeviceManager(){
+    return &deviceManager;
+}

@@ -10,11 +10,12 @@
 */
 class MainComponent  : public AudioAppComponent, //public juce::Component,
                        private juce::Timer,
-                       Button::Listener
+                       Button::Listener,
+                       private ChangeListener
 {
 public:
     //==============================================================================
-    MainComponent();
+    MainComponent(AudioDeviceManager& deviceManager);
     ~MainComponent() override;
 
     //==============================================================================
@@ -32,6 +33,7 @@ public:
     // Listener interface for buttons
     void buttonClicked (Button* button) override;
     void setExperimentMode(int mode);
+    void updateDeviceSettings();
     
 private:
     //==============================================================================    
@@ -73,6 +75,15 @@ private:
     
     VstControlComponent m_machineControlComponent;
     VstControlComponent m_humanControlComponent;
+    
+    void configureGraphLayout();
+    
+    //==============================================================================
+    //AudioDeviceManager& deviceManager;
+    MidiOutput* midiOutput = nullptr;
+    
+    void changeListenerCallback (ChangeBroadcaster*) override;
+    void updateMidiOutput();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

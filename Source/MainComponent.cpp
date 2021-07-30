@@ -1,12 +1,20 @@
 #include "MainComponent.h"
+#include "MainWindow.h"
 
 //==============================================================================
-MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
+MainComponent::MainComponent(AudioDeviceManager& dm): m_pMainGraph (new AudioProcessorGraph())
+                                                      //deviceManager (dm),
+                                                      // player (getAppProperties().getUserSettings()->getBoolValue ("doublePrecisionProcessing", false))
 {
+    updateMidiOutput();
+    
+    
     // Initialise Graph and Player
     m_pMainGraph->enableAllBuses();
     deviceManager.initialiseWithDefaultDevices(2, 2);
     deviceManager.addAudioCallback(&player);
+    //deviceManager.addMidiInputDeviceCallback({}, &player.getMidiMessageCollector());
+    //deviceManager.addChangeListener(this);
     
     // Midi Input: Listen on all available inputs
     auto midiList = juce::MidiInput::getAvailableDevices();
@@ -156,7 +164,8 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     int buf = 10;
     int compWidth = 200;
     int compHeight = 100;
-    setSize (2*compWidth+3*buf, 2*compHeight+3*buf);
+    int midiMenuHeight = 200;
+    setSize (2*compWidth+3*buf, 2*compHeight+3*buf+midiMenuHeight);
     //int buffer = getWidth()/80;
     
     // Open Plugin GUI Editor: Human
@@ -202,6 +211,142 @@ MainComponent::~MainComponent()
     deviceManager.removeMidiInputDeviceCallback (device.identifier, &player);
     
 }
+//==============================================================================
+void MainComponent::configureGraphLayout() {
+    
+    // Graph IO Processors
+    m_ioProcOut         = std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor> (AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
+    m_ioProcMidiIn      = std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor> (AudioProcessorGraph::AudioGraphIOProcessor::midiInputNode);
+    m_ioProcMidiOut     = std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor> (AudioProcessorGraph::AudioGraphIOProcessor::midiOutputNode);
+    
+    //AudioPluginInstance * instance = new AudioProcessorGraph::AudioGraphIOProcessor (AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
+    
+    //std::unique_ptr<AudioProcessor> ap = new AudioProcessorGraph::AudioGraphIOProcessor (AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
+    //std::unique_ptr<AudioPluginInstance> instance = std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor> (AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode);
+    
+    m_ioProcOutNode     = m_pMainGraph->addNode (std::move (m_ioProcOut) );
+    m_ioProcMidiInNode  = m_pMainGraph->addNode (std::move (m_ioProcMidiIn) );
+    m_ioProcMidiOutNode = m_pMainGraph->addNode (std::move (m_ioProcMidiOut) );
+    m_ioProcOutNode->getProcessor()->enableAllBuses();
+    
+    // Add VST3 Plugins
+    OwnedArray<PluginDescription> pluginDescriptions;
+    KnownPluginList plist;
+    AudioPluginFormatManager pluginFormatManager;
+    //pluginFormatManager.addDefaultFormats();
+    VST3PluginFormat* vst3 = new VST3PluginFormat();
+    pluginFormatManager.addFormat(vst3);
+    
+    
+    
+    // Add Plugins from Resources folder to KnownPluginList
+    //File curDir = File::getCurrentWorkingDirectory();
+    //String dir = curDir.getFullPathName();
+    File exePath = File::getSpecialLocation (File:: currentExecutableFile);
+    File macOSPath = exePath.getParentDirectory();
+    File contentsPath = macOSPath.getParentDirectory();
+    File resourcesPath = contentsPath.getChildFile("Resources");
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/dinverno_plugin.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/DinvernoAudioMidiRecorder.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    
+    
+    //plist.scanAndAddFile("/Users/Sam/Documents/Research/TeresaProjects/Plugins/DinvernoSystemPlugins/dinverno_plugin.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    //plist.scanAndAddFile("/Users/Sam/Documents/Research/TeresaProjects/Plugins/DinvernoSystemPlugins/DinvernoAudioMidiRecorder.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    //plist.scanAndAddFile("/Users/Sam/Documents/Research/TeresaProjects/Plugins/DinvernoSystemPlugins/helm-preset2.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    //plist.scanAndAddFile("/Users/Sam/Documents/Research/TeresaProjects/Plugins/DinvernoSystemPlugins/helm-preset4.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    
+    jassert (pluginDescriptions.size() > 0);
+    String msg ("Error Loading Plugin: ");
+    
+    // Load Plugins
+    m_dinvernoSystemPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[0], 44100.0, 512, msg);
+    m_dinvernoRecorderPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[1], 44100.0, 512, msg);
+    m_helmHumanPresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[2], 44100.0, 512, msg);
+    m_helmMachinePresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[3], 44100.0, 512, msg);
+
+    m_helmHumanPresetPluginInstance->setCurrentProgram(103);
+    int numPrograms = m_helmHumanPresetPluginInstance->getNumPrograms();
+    int curProgram_human = m_helmHumanPresetPluginInstance->getCurrentProgram();
+    String programName_human = m_helmHumanPresetPluginInstance->getProgramName(curProgram_human);
+    
+    m_helmMachinePresetPluginInstance->setCurrentProgram(108);
+    int curProgram_machine = m_helmMachinePresetPluginInstance->getCurrentProgram();
+    String programName_machine = m_helmMachinePresetPluginInstance->getProgramName(curProgram_machine);
+    
+    // Create Plugin Nodes
+    m_dinvernoSystemPluginInstanceNode = m_pMainGraph->addNode (std::move (m_dinvernoSystemPluginInstance) );
+    m_dinvernoSystemPluginInstanceNode->getProcessor()->enableAllBuses();
+    
+    m_dinvernoRecorderPluginInstanceNode = m_pMainGraph->addNode (std::move (m_dinvernoRecorderPluginInstance) );
+    m_dinvernoRecorderPluginInstanceNode->getProcessor()->enableAllBuses();
+    
+    m_helmMachinePresetPluginInstanceNode = m_pMainGraph->addNode (std::move (m_helmMachinePresetPluginInstance) );
+    m_helmMachinePresetPluginInstanceNode->getProcessor()->enableAllBuses();
+    
+    m_helmHumanPresetPluginInstanceNode = m_pMainGraph->addNode (std::move (m_helmHumanPresetPluginInstance) );
+    m_helmHumanPresetPluginInstanceNode->getProcessor()->enableAllBuses();
+    //addAndMakeVisible(&graphHolder);
+    
+    // Connect Plugin Nodes
+    // Midi: Input -> helmHuman
+    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_helmHumanPresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+                                });
+    
+    // Midi: Input -> dinvernoSystem
+    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    
+    // Midi: Input -> dinvernoRecorder
+    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    // Midi: dinvernoSystem -> dinvernoRecorder
+    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    // Midi: dinvernoSystem -> helmMachine
+    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_helmMachinePresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    // Audio: helmMachine -> dinvernoRecorder (x2)
+    m_pMainGraph->addConnection({ {m_helmMachinePresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 0}
+    });
+    
+    m_pMainGraph->addConnection({ {m_helmMachinePresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 1}
+    });
+    
+    // Audio: helmHuman -> dinvernoRecorder (x2)
+    m_pMainGraph->addConnection({ {m_helmHumanPresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 0}
+    });
+    
+    m_pMainGraph->addConnection({ {m_helmHumanPresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 1}
+    });
+    
+    // Audio: dinvernoRecorder -> Audio Output (x2)
+    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, 0},
+                                  {m_ioProcOutNode->nodeID, 0}
+                                });
+    
+    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, 1},
+                                  {m_ioProcOutNode->nodeID, 1}
+                                });
+    
+    player.setProcessor (m_pMainGraph.get());
+    
+}
+
 //==============================================================================
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
@@ -318,4 +463,31 @@ void MainComponent::setExperimentMode(int mode)
 {
     m_dinvernoSystemPluginInstanceNode->getProcessor()->setCurrentProgram(mode);
     m_dinvernoRecorderPluginInstanceNode->getProcessor()->setCurrentProgram(mode);
+}
+
+void MainComponent::updateDeviceSettings()
+{
+    updateMidiOutput();
+    configureGraphLayout();
+}
+
+void MainComponent::changeListenerCallback (ChangeBroadcaster*)
+{
+    updateDeviceSettings();
+}
+
+void MainComponent::updateMidiOutput()
+{
+    /*
+    auto* defaultMidiOutput = deviceManager.getDefaultMidiOutput();
+
+    if (midiOutput != defaultMidiOutput)
+    {
+        midiOutput = defaultMidiOutput;
+
+        //if (midiOutput != nullptr)
+        //    midiOutput->startBackgroundThread();
+
+        player.setMidiOutput (midiOutput);
+    }*/
 }

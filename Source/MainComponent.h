@@ -31,6 +31,7 @@ public:
     
     // Listener interface for buttons
     void buttonClicked (Button* button) override;
+    void setExperimentMode(int mode);
     
 private:
     //==============================================================================    

@@ -34,6 +34,8 @@ public:
     void setExperimentMode(int mode);
     
     AudioDeviceManager* getDeviceManager();
+    void toggleMidiInputOnOff(juce::String deviceIdentifier);
+    void setMidiOutputDevice(juce::String deviceIdentifier);
     
 private:
     //==============================================================================    

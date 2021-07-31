@@ -44,9 +44,13 @@ public:
     void menuItemSelected (int menuItemID, int topLevelMenuIndex) override;
     void showAudioSettings();
     void updateDeviceSettings();
+    void addMidiInputsToMenu(PopupMenu& m);
+    void addMidiOutputsToMenu(PopupMenu& m);
 
 private:
     int experimentMode = ExperimentModes::Practice;
+    Array<juce::MidiDeviceInfo> midiInputs;
+    Array<juce::MidiDeviceInfo> midiOutputs;
     MainComponent *mainComponent;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)

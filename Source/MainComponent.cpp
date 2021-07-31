@@ -323,3 +323,18 @@ void MainComponent::setExperimentMode(int mode)
 AudioDeviceManager* MainComponent::getDeviceManager(){
     return &deviceManager;
 }
+
+void MainComponent::toggleMidiInputOnOff(juce::String deviceIdentifier)
+{
+    // Swap the Enabled/Disabled state of the given midi input device
+    bool enabled = deviceManager.isMidiInputDeviceEnabled(deviceIdentifier);
+    deviceManager.setMidiInputDeviceEnabled(deviceIdentifier, !enabled);
+}
+
+void MainComponent::setMidiOutputDevice(juce::String deviceIdentifier)
+{
+    if (deviceIdentifier != deviceManager.getDefaultMidiOutputIdentifier()){
+        // Change Default Midi Output to match deviceIdentifier
+        deviceManager.setDefaultMidiOutputDevice(deviceIdentifier);
+    }
+}

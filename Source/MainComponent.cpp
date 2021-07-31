@@ -156,7 +156,7 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     int buf = 10;
     int compWidth = 200;
     int compHeight = 100;
-    setSize (2*compWidth+3*buf, 2*compHeight+3*buf);
+    setSize (2*compWidth+3*buf, 3*compHeight+3*buf);
     //int buffer = getWidth()/80;
     
     // Open Plugin GUI Editor: Human
@@ -190,6 +190,8 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     addAndMakeVisible(m_humanControlComponent);
     addAndMakeVisible(m_machineControlComponent);
 
+    
+    
     startTimer (100);
 }
 

@@ -176,7 +176,6 @@ void MainComponent::connectGraphNodes()
                                   {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
     });
     
-    
     // Midi: Input -> dinvernoRecorder
     m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                   {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
@@ -187,17 +186,13 @@ void MainComponent::connectGraphNodes()
                                   {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
     });
     
-    
-
-    
-    
     // Midi: dinvernoSystem -> helmMachine
     m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                   {m_helmMachinePresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
     });
     
     // Midi: dinvernoRecorder -> MidiOutput
-    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                   {m_ioProcMidiOutNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
     });
     

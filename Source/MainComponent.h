@@ -37,6 +37,7 @@ public:
     void toggleMidiInputOnOff(juce::String deviceIdentifier);
     void setMidiOutputDevice(juce::String deviceIdentifier);
     juce::String getMidiOutputDeviceIdentifier();
+    int randomExperimentModeOffset = 0;
     
 private:
     //==============================================================================    

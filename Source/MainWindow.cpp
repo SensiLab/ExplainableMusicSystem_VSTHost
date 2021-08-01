@@ -139,8 +139,6 @@ PopupMenu MainWindow::getMenuForIndex (int topLevelMenuIndex, const String& menu
         PopupMenu midiOutputMenu;
         addMidiOutputsToMenu(midiOutputMenu);
         menu.addSubMenu("Select Midi Outputs",midiOutputMenu);
-        
-        
     }
 
     return menu;

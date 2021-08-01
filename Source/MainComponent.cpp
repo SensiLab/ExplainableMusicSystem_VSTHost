@@ -152,6 +152,8 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     addAndMakeVisible(m_humanControlComponent);
     addAndMakeVisible(m_machineControlComponent);
 
+    Random randInt = Random();
+    randomExperimentModeOffset = randInt.nextInt(3);
     
     startTimer (100);
 }
@@ -350,8 +352,16 @@ void MainComponent::updateGraph()
 
 void MainComponent::setExperimentMode(int mode)
 {
-    m_dinvernoSystemPluginInstanceNode->getProcessor()->setCurrentProgram(mode);
-    m_dinvernoRecorderPluginInstanceNode->getProcessor()->setCurrentProgram(mode);
+    // Set Experiment Mode
+    int experimentMode = 0;     // Default Practice mode
+    if (mode > 0){
+        // Experiment Performance: Randomise Mode
+        experimentMode = (mode-1 + randomExperimentModeOffset)%3 + 1;
+    }
+    
+    // Set Program Mode for dinverno_plugin and AudioMidiRecorderPlugin
+    m_dinvernoSystemPluginInstanceNode->getProcessor()->setCurrentProgram(experimentMode);
+    m_dinvernoRecorderPluginInstanceNode->getProcessor()->setCurrentProgram(experimentMode);
 }
 
 AudioDeviceManager* MainComponent::getDeviceManager(){

@@ -66,6 +66,7 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     plist.scanAndAddFile(resourcesPath.getFullPathName()+"/DinvernoAudioMidiRecorder.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
     plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
     plist.scanAndAddFile(resourcesPath.getFullPathName()+"/helm.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
+    plist.scanAndAddFile(resourcesPath.getFullPathName()+"/MidiNotePassFilter.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
     
     
     //plist.scanAndAddFile("/Users/Sam/Documents/Research/TeresaProjects/Plugins/DinvernoSystemPlugins/dinverno_plugin.vst3", true, pluginDescriptions, *pluginFormatManager.getFormat(0));
@@ -81,6 +82,7 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     m_dinvernoRecorderPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[1], 44100.0, 512, msg);
     m_helmHumanPresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[2], 44100.0, 512, msg);
     m_helmMachinePresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[3], 44100.0, 512, msg);
+    m_midiNotePassFilterPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[4], 44100.0, 512, msg);
 
     m_helmHumanPresetPluginInstance->setCurrentProgram(103);
     int numPrograms = m_helmHumanPresetPluginInstance->getNumPrograms();
@@ -103,6 +105,10 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     
     m_helmHumanPresetPluginInstanceNode = m_pMainGraph->addNode (std::move (m_helmHumanPresetPluginInstance) );
     m_helmHumanPresetPluginInstanceNode->getProcessor()->enableAllBuses();
+    
+    m_midiNotePassFilterPluginInstanceNode = m_pMainGraph->addNode (std::move (m_midiNotePassFilterPluginInstance) );
+    m_midiNotePassFilterPluginInstanceNode->getProcessor()->enableAllBuses();
+    
     //addAndMakeVisible(&graphHolder);
     
     connectGraphNodes();
@@ -166,19 +172,24 @@ MainComponent::~MainComponent()
 void MainComponent::connectGraphNodes()
 {
     // Connect Plugin Nodes
-    // Midi: Input -> helmHuman
+    // Midi: Input -> MidiNotePassFilter
     m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_midiNotePassFilterPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+                                });
+    
+    // Midi: MidiNotePassFilter -> helmHuman
+    m_pMainGraph->addConnection({ {m_midiNotePassFilterPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                   {m_helmHumanPresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
                                 });
+    
+    // Midi: MidiNotePassFilter -> dinvernoRecorder
+    m_pMainGraph->addConnection({ {m_midiNotePassFilterPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
     
     // Midi: Input -> dinvernoSystem
     m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                   {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
-    });
-    
-    // Midi: Input -> dinvernoRecorder
-    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
     });
     
     // Midi: dinvernoSystem -> dinvernoRecorder

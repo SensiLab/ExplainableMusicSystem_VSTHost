@@ -53,6 +53,11 @@ private:
     AudioProcessorGraph::Node::Ptr                  m_ioProcMidiInNode;
     AudioProcessorGraph::Node::Ptr                  m_ioProcMidiOutNode;
 
+    // MidiNotePassFilter
+    std::unique_ptr<AudioPluginInstance>            m_midiNotePassFilterPluginInstance;
+    AudioProcessorGraph::Node::Ptr                  m_midiNotePassFilterPluginInstanceNode;
+    //AudioProcessorEditor*                           m_midiNotePassFilterPluginInstance;
+    
     // Dinverno System Plugin, Node and Editor
     std::unique_ptr<AudioPluginInstance>            m_dinvernoSystemPluginInstance;
     AudioProcessorGraph::Node::Ptr                  m_dinvernoSystemPluginInstanceNode;

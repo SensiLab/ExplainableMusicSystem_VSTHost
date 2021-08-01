@@ -211,12 +211,13 @@ void MainWindow::addMidiOutputsToMenu(PopupMenu& m)
     AudioDeviceManager* deviceManager = mainComponent->getDeviceManager();
     
     midiOutputs = juce::MidiOutput::getAvailableDevices();
+    juce::String outputMidiDeviceIdentifier = mainComponent->getMidiOutputDeviceIdentifier();
     
     for(int i = 0; i < midiOutputs.size(); i++){
         // Get Midi Device Info
         auto outputDevice  = midiOutputs[i];    //juce::MidiInput::getDefaultDevice();
         bool enabled = false;
-        if (outputDevice.identifier == deviceManager->getDefaultMidiOutputIdentifier()){
+        if (outputDevice.identifier == outputMidiDeviceIdentifier){
             enabled = true;
         }
         

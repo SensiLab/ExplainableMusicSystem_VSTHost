@@ -36,6 +36,7 @@ public:
     AudioDeviceManager* getDeviceManager();
     void toggleMidiInputOnOff(juce::String deviceIdentifier);
     void setMidiOutputDevice(juce::String deviceIdentifier);
+    juce::String getMidiOutputDeviceIdentifier();
     
 private:
     //==============================================================================    
@@ -72,8 +73,12 @@ private:
     AudioProcessorGraph::Node::Ptr                  m_helmHumanPresetPluginInstanceNode;
     //AudioProcessorEditor*                           m_helmHumanPresetPluginEditor;
     
+    void connectGraphNodes();
+    
     AudioDeviceManager deviceManager;
     AudioProcessorPlayer player;
+    //MidiOutput* midiOutput = nullptr;
+    std::unique_ptr<MidiOutput> midiOutput = nullptr;
     
     VstControlComponent m_machineControlComponent;
     VstControlComponent m_humanControlComponent;

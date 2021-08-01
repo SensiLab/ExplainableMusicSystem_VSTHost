@@ -8,17 +8,27 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     deviceManager.initialiseWithDefaultDevices(2, 2);
     deviceManager.addAudioCallback(&player);
     
-    // Midi Input: Listen on all available inputs
-    auto midiList = juce::MidiInput::getAvailableDevices();
-    for(int i = 0; i < midiList.size(); i++){
-        auto inputDevice  = midiList[i];    //juce::MidiInput::getDefaultDevice();
-        deviceManager.setMidiInputDeviceEnabled(inputDevice.identifier, true);
-        deviceManager.addMidiInputDeviceCallback(inputDevice.identifier, &player);
+    // Midi Input: Listen on all available inputs (except inputs with "IAC Driver Bus")
+    auto midiInputList = juce::MidiInput::getAvailableDevices();
+    for(int i = 0; i < midiInputList.size(); i++){
+        auto inputDevice  = midiInputList[i];
+        if (!inputDevice.name.contains("IAC Driver Bus")){
+            deviceManager.setMidiInputDeviceEnabled(inputDevice.identifier, true);
+            deviceManager.addMidiInputDeviceCallback(inputDevice.identifier, &player);
+        }
     }
     
-    // Midi Outputs
-    auto outputDevice = juce::MidiOutput::getDefaultDevice();
-    deviceManager.setDefaultMidiOutputDevice(outputDevice.identifier);
+    // Midi Outputs: Preference First output with "IAC Driver Bus" in the name, or open default device.
+    auto midiOutputList = juce::MidiOutput::getAvailableDevices();
+    auto outputDeviceIdentifier = juce::MidiOutput::getDefaultDevice().identifier;
+    for(int i = 0; i < midiInputList.size(); i++){
+        auto outputDevice  = midiOutputList[i];
+        if (outputDevice.name.contains("IAC Driver Bus")){
+            outputDeviceIdentifier = outputDevice.identifier;
+            break;
+        }
+    }
+    setMidiOutputDevice(outputDeviceIdentifier);
     
     // Graph IO Processors
     m_ioProcOut         = std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor> (AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
@@ -95,62 +105,8 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     m_helmHumanPresetPluginInstanceNode->getProcessor()->enableAllBuses();
     //addAndMakeVisible(&graphHolder);
     
-    // Connect Plugin Nodes
-    // Midi: Input -> helmHuman
-    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                  {m_helmHumanPresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
-                                });
-    
-    // Midi: Input -> dinvernoSystem
-    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                  {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
-    });
-    
-    
-    // Midi: Input -> dinvernoRecorder
-    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
-    });
-    
-    // Midi: dinvernoSystem -> dinvernoRecorder
-    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
-    });
-    
-    // Midi: dinvernoSystem -> helmMachine
-    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                  {m_helmMachinePresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
-    });
-    
-    // Audio: helmMachine -> dinvernoRecorder (x2)
-    m_pMainGraph->addConnection({ {m_helmMachinePresetPluginInstanceNode->nodeID, 0},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 0}
-    });
-    
-    m_pMainGraph->addConnection({ {m_helmMachinePresetPluginInstanceNode->nodeID, 0},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 1}
-    });
-    
-    // Audio: helmHuman -> dinvernoRecorder (x2)
-    m_pMainGraph->addConnection({ {m_helmHumanPresetPluginInstanceNode->nodeID, 0},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 0}
-    });
-    
-    m_pMainGraph->addConnection({ {m_helmHumanPresetPluginInstanceNode->nodeID, 0},
-                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 1}
-    });
-    
-    // Audio: dinvernoRecorder -> Audio Output (x2)
-    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, 0},
-                                  {m_ioProcOutNode->nodeID, 0}
-                                });
-    
-    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, 1},
-                                  {m_ioProcOutNode->nodeID, 1}
-                                });
-    
-    player.setProcessor (m_pMainGraph.get());
-    
+    connectGraphNodes();
+
     // GUI Setup
     // Window Size
     int buf = 10;
@@ -190,6 +146,7 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     addAndMakeVisible(m_humanControlComponent);
     addAndMakeVisible(m_machineControlComponent);
 
+    
     startTimer (100);
 }
 
@@ -201,8 +158,79 @@ MainComponent::~MainComponent()
     deviceManager.setMidiInputDeviceEnabled (device.identifier, false);
     deviceManager.removeMidiInputDeviceCallback (device.identifier, &player);
     
+    if (midiOutput != nullptr)
+        midiOutput->stopBackgroundThread();
 }
 //==============================================================================
+
+void MainComponent::connectGraphNodes()
+{
+    // Connect Plugin Nodes
+    // Midi: Input -> helmHuman
+    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_helmHumanPresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+                                });
+    
+    // Midi: Input -> dinvernoSystem
+    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    
+    // Midi: Input -> dinvernoRecorder
+    m_pMainGraph->addConnection({ {m_ioProcMidiInNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    // Midi: dinvernoSystem -> dinvernoRecorder
+    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    
+
+    
+    
+    // Midi: dinvernoSystem -> helmMachine
+    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_helmMachinePresetPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    // Midi: dinvernoRecorder -> MidiOutput
+    m_pMainGraph->addConnection({ {m_dinvernoSystemPluginInstanceNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                  {m_ioProcMidiOutNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}
+    });
+    
+    // Audio: helmMachine -> dinvernoRecorder (x2)
+    m_pMainGraph->addConnection({ {m_helmMachinePresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 0}
+    });
+    
+    m_pMainGraph->addConnection({ {m_helmMachinePresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 1}
+    });
+    
+    // Audio: helmHuman -> dinvernoRecorder (x2)
+    m_pMainGraph->addConnection({ {m_helmHumanPresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 0}
+    });
+    
+    m_pMainGraph->addConnection({ {m_helmHumanPresetPluginInstanceNode->nodeID, 0},
+                                  {m_dinvernoRecorderPluginInstanceNode->nodeID, 1}
+    });
+    
+    // Audio: dinvernoRecorder -> Audio Output (x2)
+    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, 0},
+                                  {m_ioProcOutNode->nodeID, 0}
+                                });
+    
+    m_pMainGraph->addConnection({ {m_dinvernoRecorderPluginInstanceNode->nodeID, 1},
+                                  {m_ioProcOutNode->nodeID, 1}
+                                });
+    
+    player.setProcessor (m_pMainGraph.get());
+}
+
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     // This function will be called when the audio device is started, or when
@@ -333,8 +361,30 @@ void MainComponent::toggleMidiInputOnOff(juce::String deviceIdentifier)
 
 void MainComponent::setMidiOutputDevice(juce::String deviceIdentifier)
 {
-    if (deviceIdentifier != deviceManager.getDefaultMidiOutputIdentifier()){
-        // Change Default Midi Output to match deviceIdentifier
-        deviceManager.setDefaultMidiOutputDevice(deviceIdentifier);
+    // Change System Midi Output to new device
+    // ... using the deviceManager.setDefaultMidiOutputDevice() caused issues with the graph, this workaround seems to work
+    
+    if (midiOutput == NULL){
+        midiOutput = MidiOutput::openDevice(deviceIdentifier);
+
+        if (midiOutput != nullptr)
+            midiOutput->startBackgroundThread();
+
+        player.setMidiOutput (&*midiOutput);
     }
+    else if (midiOutput->getIdentifier() != deviceIdentifier){
+        //midiOutput->clearAllPendingMessages();
+        midiOutput->stopBackgroundThread();
+        midiOutput = MidiOutput::openDevice(deviceIdentifier);
+
+        if (midiOutput != nullptr)
+            midiOutput->startBackgroundThread();
+
+        player.setMidiOutput (&*midiOutput);
+    }
+}
+
+juce::String MainComponent::getMidiOutputDeviceIdentifier()
+{
+    return midiOutput->getIdentifier();
 }

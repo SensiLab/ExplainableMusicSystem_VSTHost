@@ -112,7 +112,7 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     int buf = 10;
     int compWidth = 200;
     int compHeight = 100;
-    setSize (2*compWidth+3*buf, 2*compHeight+3*buf);
+    setSize (2*compWidth+3*buf, 2*compHeight);
     //int buffer = getWidth()/80;
     
     // Open Plugin GUI Editor: Human

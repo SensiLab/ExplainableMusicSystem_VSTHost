@@ -84,12 +84,12 @@ MainComponent::MainComponent(): m_pMainGraph (new AudioProcessorGraph())
     m_helmMachinePresetPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[3], 44100.0, 512, msg);
     m_midiNotePassFilterPluginInstance = pluginFormatManager.createPluginInstance(*pluginDescriptions[4], 44100.0, 512, msg);
 
-    m_helmHumanPresetPluginInstance->setCurrentProgram(103);
+    m_helmHumanPresetPluginInstance->setCurrentProgram(103);    // Helm Preset "SF Celeste"
     int numPrograms = m_helmHumanPresetPluginInstance->getNumPrograms();
     int curProgram_human = m_helmHumanPresetPluginInstance->getCurrentProgram();
     String programName_human = m_helmHumanPresetPluginInstance->getProgramName(curProgram_human);
     
-    m_helmMachinePresetPluginInstance->setCurrentProgram(108);
+    m_helmMachinePresetPluginInstance->setCurrentProgram(109);  // Helm Preset "SF Piano 4"
     int curProgram_machine = m_helmMachinePresetPluginInstance->getCurrentProgram();
     String programName_machine = m_helmMachinePresetPluginInstance->getProgramName(curProgram_machine);
     
